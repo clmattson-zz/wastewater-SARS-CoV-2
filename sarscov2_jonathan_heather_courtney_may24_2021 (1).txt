@@ -1,0 +1,39 @@
+Meeting with Jonathan Eisen, Heather Bischel, Courtney Mattson, and Sam Díaz-Muñoz on JGI-SARS-CoV-2 Wastewater Monitoring
+May 24, 2021
+
+-Jonathan: The weird history of this joint JGI/UCD grant. Kate Lane.
+
+-qPCR: Extracts throughout the year
+
+-First step: sequence analysis workflows that are in existence for variant calling. Go beyond variants. Assemble genomes from wastewater or link variants in distance sites.
+
+-The data is a panel of PCR primers that have small PCR primers (100-150bp). Smaller amplicons better for wastewater. Swift.
+
+-Deconvolution workflow
+
+-Data from patients, asymptomatic testing. Genotype data for most all positives
+
+-2 sample sets sequenced from WW samples collection
+
+-Wastewater samples correspond to areas within the city. Or building sampling on campus.
+
+-Two ways to get sequenced through HDT, asking JGI may be possible. 
+
+Existing Wastewater Sequencing Results:
+-10-12 of different WW samples (with ARTIC primers) from Sam’s lab
+-Raw and iBar pipeline. 24 samples (WWTP, lowest Ct results). From UCD SOM (data in Dropbox/Box)
+
+
+Next Steps / Overall Rough Goals
+1. Figure out bioinformatic processing of samples, variant calling pipeline, and variant determination from existing UCD WW samples
+2. Test extraction methods with sequencing from heather’s lab
+3. Decide on ideal samples to sequence, questions to answer, data available.
+4. Get those selected sampled sequenced.
+5. Run through pipeline and analyze
+6. Separate paper or hop onto Heather’s existing planned projects.
+ 
+
+
+
+
+
