@@ -29,7 +29,21 @@ cmatt5@crick:~/SARS-COV2/minimap-workflow/data/PRJNA661613$ wget https://sra-pub
 #get UCDavis environmental data
 #in theoory you can copy straight from bioshare to crick but I downloaded to local and then scp'ed to crick. 
 #put under /data 
+```
 
+**TO RUN TITUS' MINIMAP PIPELINE**
+**Workflow details and variant calling parameters**
+
+rule map_reads maps reads with minimap.
+rule rmdup removes perfectly duplicated reads with samtools rmdup.
+the rule call_variants_spec does highly specific variant calling with bcftools
+QUAL<40 eliminates low quality mappings
+DP<10 eliminates
+GT!="1/1" eliminates heterozygous calls
+the rule consensus_from_vcf builds a consensus using the VCF output by call_variants_spec, with bcftools consensus
+the rule mask_low_coverage takes the consensus produced by consensus_from_vcf and masks bases that have mapping coverage strictly below 5
+
+```{bash}
 srun -J covid -t 6:00:00 --mem=25gb -c 1 --pty bash
 conda activate covid
 
@@ -88,7 +102,10 @@ snakemake --use-conda -j 4
 snakemake --delete-all-output --cores 1
 #try again:
 snakemake --use-conda -j 4 
+#success!
 
 ```
+
+OK. now i have some results, but the output .vcf file in unfiltered.
 
 
