@@ -5,6 +5,7 @@
 
 #processed data (batch 1): https://ucdavis.app.box.com/file/802677521499
 
+```{bash}
 #in crick:
  srun -J ivar -t 6:00:00 --mem=14gb -c 1 --pty bash
 #make empty conda env
@@ -20,3 +21,74 @@ git clone https://github.com/ucd-covid/minimap-workflow.git
 cd minimap-workflow/
 mamba env create --name covid -f environment.yml
 conda activate covid
+
+#get example data 
+cmatt5@crick:~/SARS-COV2/minimap-workflow/data/PRJNA661613$ wget https://sra-pub-sars-cov2.s3.amazonaws.com/sra-src/SRR12596165/6_09_N1_S30_R1_001.fastq.gz.1
+cmatt5@crick:~/SARS-COV2/minimap-workflow/data/PRJNA661613$ wget https://sra-pub-sars-cov2.s3.amazonaws.com/sra-src/SRR12596165/6_09_N1_S30_R2_001.fastq.gz.1
+
+#get UCDavis environmental data
+#in theoory you can copy straight from bioshare to crick but I downloaded to local and then scp'ed to crick. 
+#put under /data 
+
+srun -J covid -t 6:00:00 --mem=25gb -c 1 --pty bash
+conda activate covid
+
+**#FIRST: need to get interleaved reads with 'abundtrime' name**
+#do this by running ```Snakefile.merge-pe``` in the directory with the raw data (aka /data for now)
+#This currently makes interleaved files with abundtrim.fq.gz in the name. Something like:
+#snakemake -s /path/to/Snakefile.merge-pe -j 4
+(covid) cmatt5@c2-3:~/SARS-COV2/minimap-workflow/data$ snakemake -s ~/SARS-COV2/minimap-workflow/Snakefile.merge-pe -j 4
+#found 1 samples
+#Building DAG of jobs...
+#Using shell: /bin/bash
+#Provided cores: 4
+#Rules claiming more threads will be scaled down.
+#Job counts:
+#        count   jobs
+#        1       all
+#        1       merge_pe
+#        2
+#Select jobs to execute...
+
+#[Wed Jun 16 11:59:52 2021]
+#rule merge_pe:
+#    input: GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14_R1_001.fastq.gz, GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14_R2_001.fastq.gz
+#    output: GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.fq.gz
+#    jobid: 1
+#    wildcards: sample=GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14
+
+#[Wed Jun 16 12:03:32 2021]
+#Finished job 1.
+#1 of 2 steps (50%) done
+#Select jobs to execute...
+
+#[Wed Jun 16 12:03:32 2021]
+#localrule all:
+#    input: GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.fq.gz
+#    jobid: 0
+
+#[Wed Jun 16 12:03:32 2021]
+#Finished job 0.
+#2 of 2 steps (100%) done
+#Complete log: /home/cmatt5/SARS-COV2/minimap-workflow/data/.snakemake/log/2021-06-16T115951.950604.snakemake.log
+
+#file called ```GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.fq.gz``` now in ./data
+
+#now to run workflow:
+#in minimap-workflow (i think?)
+snakemake --use-conda -j 4 
+
+#error:  File "/home/cmatt5/SARS-COV2/minimap-workflow/./variants_of_interest.py", line 3, in <module>
+#    import screed
+#ModuleNotFoundError: No module named 'screed'
+
+ Probably have to conda install screed, whatever that is
+ 
+#delete all output to start over
+snakemake --delete-all-output --cores 1
+#try again:
+snakemake --use-conda -j 4 
+
+```
+
+
