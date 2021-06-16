@@ -1,0 +1,22 @@
+#ivar github: https://github.com/andersen-lab/ivar
+#ivar manual: https://andersen-lab.github.io/ivar/html/manualpage.html#autotoc_md17
+
+#titus variant calling with minimap: https://github.com/clmattson/dib_rotation/blob/master/doc/02_conda.md
+
+#processed data (batch 1): https://ucdavis.app.box.com/file/802677521499
+
+#in crick:
+ srun -J ivar -t 6:00:00 --mem=14gb -c 1 --pty bash
+#make empty conda env
+conda create -y -n ivar
+conda install ivar
+
+#Titus's workflow requires mamba
+#in (base) conda:
+conda install mamba
+
+#from github:
+git clone https://github.com/ucd-covid/minimap-workflow.git
+cd minimap-workflow/
+mamba env create --name covid -f environment.yml
+conda activate covid
