@@ -33,6 +33,7 @@ Next Steps / Overall Rough Goals
 6. Separate paper or hop onto Heather’s existing planned projects.
  
 
+Swift workflow https://swiftbiosci.com/wp-content/uploads/2021/02/TEC-006_SARS-CoV-2_TechNote_Rev3.pdf
 
 
 
