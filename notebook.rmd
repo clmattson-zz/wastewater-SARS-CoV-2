@@ -109,3 +109,33 @@ snakemake --use-conda -j 4
 OK. now i have some results, but the output .vcf file in unfiltered.
 
 
+
+
+
+
+
+
+
+##### get OSU pipeline going #####
+
+#add agbiome conda channel 
+cmatt5@crick:~$ srun -J osu -t 6:00:00 --mem=25gb -c 1 --pty bash
+(base) cmatt5@c2-3:~$ conda config --add channels agbiome
+(base) cmatt5@c2-3:~$ conda activate osu
+(osu) cmatt5@c2-3:~$ conda install -c agbiome bbtools
+
+#instal bwa
+git clone https://github.com/lh3/bwa.git
+cd bwa; make
+./bwa mem ref.fa read-se.fq.gz | gzip -3 > aln-se.sam.gz
+./bwa mem ref.fa read1.fq read2.fq | gzip -3 > aln-pe.sam.gzgcc -c -g -Wall -Wno-unused-function -O2 -DHAVE_PTHREAD -DUSE_MALLOC_WRAPPERS  utils.c -o utils.o
+
+#samtools
+ conda install samtools
+ # All requested packages already installed.
+ 
+#install primerclip
+conda install -c bioconda primerclip
+
+
+
