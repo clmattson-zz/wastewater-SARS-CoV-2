@@ -171,6 +171,7 @@ cd bwa; make
  
 #install primerclip
 conda install -c bioconda primerclip
+
 #install gatk
 conda install -c bioconda gatk
 
@@ -207,3 +208,23 @@ wget https://swiftbiosci.com/wp-content/uploads/2020/09/sarscov2_v1_masterfile.t
 unzip sarscov2_v1_masterfile.txt.zip
 #primerclip masterfile.txt alignmentfile.sam outputfilename.sam
 primerclip sarscov2_v1_masterfile.txt GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.sam GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.primerclipped.sam
+
+#Convert sam to bam
+samtools view -b GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.primerclipped.sam -o GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.bam
+
+#Sort reads
+samtools sort GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.bam -o GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam
+
+#Index reads
+samtools index GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam
+
+#Get depth from Bam files
+samtools depth -a GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam | awk '$3 < 5' | cut -f 1,2 > output.depth
+#output.depth is a .txt
+
+
+#call variants!
+gatk HaplotypeCaller --java-options {params.mem} -R {input.ref} -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy {params.ploidy} --input {input.dedup} --output {output.gvcf}
+#idk what params.mem is, skipping for now
+
+gatk HaplotypeCaller --java-options {params.mem} -R {input.ref} -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy {params.ploidy} --input {input.dedup} --output {output.gvcf}
