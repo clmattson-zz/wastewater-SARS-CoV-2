@@ -153,6 +153,12 @@ cmatt5@crick:~$ srun -J osu -t 6:00:00 --mem=25gb -c 1 --pty bash
 (base) cmatt5@c2-3:~$ conda activate osu
 (osu) cmatt5@c2-3:~$ conda install -c agbiome bbtools
 
+#need bbmap 
+wget https://sourceforge.net/projects/bbmap/files/latest/download
+mv download ./BBMap_38.90.tar.gz
+tar -xvzf BBMap_38.90.tar.gz
+
+
 #instal bwa
 git clone https://github.com/lh3/bwa.git
 cd bwa; make
@@ -172,7 +178,32 @@ conda install -c bioconda gatk
 
 #copy example files fromm minimap workflo dir
 
-#start workflow on example data
-bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 {params.mem} t={threads} in1={input.R1} in2={input.R2} out1={output.R1} out2={output.R2} ref=/local/cluster/bbmap/resources/adapters.fa
-
+#start workflow on example data - 1st step trim adapters w bbduk
+#idk what params.mem is ....? taking out for now
+#doing 4 threads because ..... ?
+#make sure no spaces after = signs 
+#doesnt seem to like * character, hard coded file names for now
+#bbmap folder is in ~
+ bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 t=4 in1=GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14_R1_001.fastq.gz in2=GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14_R2_001.fastq.gz out1=GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14_R1_001.bbduk.fastq.gz out2=GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14_R2_001.bbduk.fastq.gz ref=../../../bbmap/resources/adapters.fa
+ 
+ #need to make bwa reference genome index with 
+ #bwa index [-p prefix] [-a algoType] <in.db.fasta>
+ bwa index ../../sarscov2WuhanHu1.fasta #makes a bunch of files in the parent dir
+ 
+ ## Run BWA mem - keep 4 threads ??? 
+# line from brett: bwa mem -t 4 -M -R '{params.rg}' {input.fa} {input.fq} > {output.sam}
+ # idk what params.rg is, think it has to do with read group name and output sequence ID's .... lets see what happens if i skip
+ # I think the input.fa is the reference, and I can put 2 paired read files as file1.fq file 2.fq back to back
+bwa mem -t 4 -M ../../sarscov2WuhanHu1.fasta *R1_001.bbduk.fastq.gz *R2_001.bbduk.fastq.gz > GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sam
 ```
+
+#samtools sort .sam
+samtools sort -n GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sam -o GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.sam
+
+#primerclip
+#masterfiles available here: https://swiftbiosci.com/accel-amplicon-data-and-bioinformatics-tools-downloads/
+#not sure which sarscov2 file ( standard vs addtnl genome coverage) will stick w standard for now
+wget https://swiftbiosci.com/wp-content/uploads/2020/09/sarscov2_v1_masterfile.txt.zip
+unzip sarscov2_v1_masterfile.txt.zip
+#primerclip masterfile.txt alignmentfile.sam outputfilename.sam
+primerclip sarscov2_v1_masterfile.txt GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.sam GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.primerclipped.sam
