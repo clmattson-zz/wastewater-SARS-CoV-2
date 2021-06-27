@@ -118,6 +118,35 @@ OK. now i have some results, but the output .vcf file in unfiltered.
 
 ##### get OSU pipeline going #####
 
+# workflow outline frpom Brett Tyler LAb: 
+
+"## Trim reads w/ bbduk
+bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 {params.mem} t={threads} in1={input.R1} in2={input.R2} out1={output.R1} out2={output.R2} ref=/local/cluster/bbmap/resources/adapters.fa
+## Run BWA mem
+bwa mem -t {threads} -M -R '{params.rg}' {input.fa} {input.fq} > {output.sam}
+## Coord sort sams
+samtools sort -n {input.sam} -o {output.sam}
+## Soft Clip
+primerclip {input.master} {input.sam} {output.sam}
+## Convert sam to bam
+samtools view -b {input.sam} -o {output.bam}
+## Sort reads
+samtools sort {input.bam} -o {output.sort}
+## Index reads
+samtools index {input.bam}
+## Get depth from Bam files
+samtools depth -a {input.bam} | awk '$3 < 5' | cut -f 1,2 > {output.depth}
+## call variants in g.vcf mode
+gatk HaplotypeCaller --java-options {params.mem} -R {input.ref} -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy {params.ploidy} --input {input.dedup} --output {output.gvcf}
+## Combine gvcfs
+gatk CombineGVCFs --java-options {params.mem} -R {input.ref} {lgvcfs} -O {output.gvcf}
+## Genotype merged gvcf with gatk GenotypeGVCFs
+gatk GenotypeGVCFs --java-options {params.mem} {knvars} -R {input.ref} -V {input.gvcf} -O {output.raw_vcf}
+## Custom R script"
+
+``` {bash}
+
+
 #add agbiome conda channel 
 cmatt5@crick:~$ srun -J osu -t 6:00:00 --mem=25gb -c 1 --pty bash
 (base) cmatt5@c2-3:~$ conda config --add channels agbiome
@@ -136,6 +165,14 @@ cd bwa; make
  
 #install primerclip
 conda install -c bioconda primerclip
+#install gatk
+conda install -c bioconda gatk
 
+#download wuhan hu 1 reference .fa from ncbi
 
+#copy example files fromm minimap workflo dir
 
+#start workflow on example data
+bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 {params.mem} t={threads} in1={input.R1} in2={input.R2} out1={output.R1} out2={output.R2} ref=/local/cluster/bbmap/resources/adapters.fa
+
+```
