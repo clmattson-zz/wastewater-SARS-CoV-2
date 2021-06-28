@@ -3,6 +3,8 @@
 
 #titus variant calling with minimap: https://github.com/clmattson/dib_rotation/blob/master/doc/02_conda.md
 
+#general SWIFT workflow info https://swiftbiosci.com/wp-content/uploads/2019/11/TEC-005-PRIMERCLIP-A-TOOL-FOR-TRIMMING-PRIMER-SEQUENCES-USING-COMMAND-LINE-OR-GALAXY-Rev-1.pdf
+
 #processed data (batch 1): https://ucdavis.app.box.com/file/802677521499
 
 ```{bash}
@@ -107,13 +109,6 @@ snakemake --use-conda -j 4
 ```
 
 OK. now i have some results, but the output .vcf file in unfiltered.
-
-
-
-
-
-
-
 
 
 ##### get OSU pipeline going #####
@@ -261,3 +256,84 @@ gatk-4.2.0.0/gatk GenotypeGVCFs --java-options "-Xmx4g"  -R ./sarscov2WuhanHu1.f
 
 
 ```
+
+
+
+## test ivar pipeline on same file set ##
+```{bash}
+#ivar starts with primer trimming of existing sorted BAM file
+#need primer BED file, only have masterfile.txt. got .bed from Ryan Davis
+
+#will need reference GFF file (from ncbi)
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar$ wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/858/895/GCF_009858895.2_ASM985889v3/GCF_009858895.2_ASM985889v3_genomic.gff.gz
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar$ gunzip *.gz
+
+Lets try ivar on BAM from Titus minimap wf (minimap based)and BAM (bwa mem based) from OSU workflow
+mkdir minimap
+mkdir osu
+#copy sorted bam file and index files (.bai) to respective ivar directory
+#rename minimap bam to end with '.bam''
+mv GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.covid19.bam.sorted GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.covid19.sorted.bam
+
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/minimap$ samtools index GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.covid19.sorted.bam
+
+#next, ivar trim
+#Usage: ivar trim -i <input.bam> -b <primers.bed> -p <prefix> [-m <min-length>] [-q <min-quality>] [-s <sliding-window-width>]
+#Input Options    Description
+#           -i    (Required) Sorted bam file, with aligned reads, to trim primers and quality
+#           -b    (Required) BED file with primer sequences and positions
+#           -m    Minimum length of read to retain after trimming (Default: 30)
+#           -q    Minimum quality threshold for sliding window to pass (Default: 20)
+#           -s    Width of sliding window (Default: 4)
+#           -e    Include reads with no primers. By default, reads with no primers are excluded
+#Output Options   Description
+#           -p    (Required) Prefix for the output BAM file
+
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/minimap$ ivar trim -i GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.covid19.sorted.bam -b ../NC_045512.2.v2.primers.bed -p 'GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed'
+
+#need to sort trimmed files?
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/minimap$ samtools sort -o GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed.sorted.bam GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed.bam
+
+#call variants with  pileup piped into ivar variants:
+#samtools mpileup -aa -A -d 0 -B -Q 0 --reference [<reference-fasta] <input.bam> | ivar variants -p <prefix> [-q <min-quality>] [-t <min-frequency-threshold>] [-m <minimum depth>] [-r <reference-fasta>] [-g GFF file]
+#will not specify depth or quality yet, just want to compare bam starting points
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/minimap$ samtools mpileup -aa -A -d 0 -B -Q 0 --reference ../../sarscov2WuhanHu1.fasta GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed.sorted.bam | ivar variants -p GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.variants -r ../../sarscov2WuhanHu1.fasta -g ../GCF_009858895.2_ASM985889v3_genomic.gff
+
+#repeat in ivar/osu
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/osu$ samtools index GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/osu$ ivar trim -i GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam -b ../NC_045512.2.v2.primers.bed -p 'GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed'
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/osu$ samtools sort -o GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed.sorted.bam GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed.bam
+(ivar) cmatt5@c2-3:~/SARS-COV2/ivar/minimap$ samtools mpileup -aa -A -d 0 -B -Q 0 --reference ../../sarscov2WuhanHu1.fasta GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.ivartrimmed.sorted.bam | ivar variants -p 'osu.GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.variants' -r ../../sarscov2WuhanHu1.fasta -g ../GCF_009858895.2_ASM985889v3_genomic.gff
+
+
+#resulting file very short .... weird
+```
+
+
+
+
+### testing artic####
+
+```{bash}
+Github: https://github.com/artic-network/fieldbioinformatics
+ARTIC 'SOP' : https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
+
+git clone https://github.com/artic-network/fieldbioinformatics
+cd fieldbioinformatics 
+conda env create -f environment.yml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
