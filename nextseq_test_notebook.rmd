@@ -312,21 +312,6 @@ mv GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.abundtrim.covid19.bam.sorted GSR
 
 
 
-### testing artic####
-
-```{bash}
-Github: https://github.com/artic-network/fieldbioinformatics
-ARTIC 'SOP' : https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
-
-git clone https://github.com/artic-network/fieldbioinformatics
-cd fieldbioinformatics 
-conda env create -f environment.yml
-
-
-
-
-
-
 
 
 
