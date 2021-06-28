@@ -1,0 +1,19 @@
+
+
+
+
+### testing artic####
+
+```{bash}
+Github: https://github.com/artic-network/fieldbioinformatics
+ARTIC 'SOP' : https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html
+
+git clone https://github.com/artic-network/fieldbioinformatics
+cd fieldbioinformatics 
+conda env create -f environment.yml
+
+#think i need the covid19 specific repo
+git clone https://github.com/artic-network/artic-ncov2019.git
+cd artic-ncov2019
+conda env remove -n artic-ncov2019
+conda env create -f environment.yml
