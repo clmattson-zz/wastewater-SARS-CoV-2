@@ -262,7 +262,7 @@ gatk-4.2.0.0/gatk GenotypeGVCFs --java-options "-Xmx4g"  -R ./sarscov2WuhanHu1.f
 #ivar starts with primer trimming of existing sorted BAM file
 #need primer BED file, only have masterfile.txt. got .bed from Ryan Davis
 
-#will need reference GFF file (from ncbi)
+#will need reference GFF file (from ncbi) https://www.ncbi.nlm.nih.gov/genome/?term=sars+cov+2
 (ivar) cmatt5@c2-3:~/SARS-COV2/ivar$ wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/858/895/GCF_009858895.2_ASM985889v3/GCF_009858895.2_ASM985889v3_genomic.gff.gz
 (ivar) cmatt5@c2-3:~/SARS-COV2/ivar$ gunzip *.gz
 
