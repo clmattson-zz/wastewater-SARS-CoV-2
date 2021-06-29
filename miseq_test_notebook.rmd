@@ -6,7 +6,7 @@
 scp 
 
 ```
-repeat OSU pipeline on MiSeq data
+## repeat OSU pipeline on MiSeq data
 
 ```{bash}
 conda activate osu
@@ -51,7 +51,7 @@ conda activate gatk
 
 
 
-#repeat Titus workflow 
+## repeat Titus workflow 
 ```{bash}
 #get data:
 cp ../../osu/MiSeq/10070000434701_S13_L001_R*.fastq.gz ./
@@ -70,13 +70,27 @@ mv GSR* ./SWIFT
 #done 
 ```
 
-##repeat ivar work flow
-
-
+## repeat ivar work flow
 ```{bash}
+#format:
+#(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**minimap**$ command
+#(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**osu**$ command
 
+# make index of sorted bams
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**minimap**$ samtools index *.bam
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**osu**$ samtools index *.bam
 
+#primer trim with ivar trim
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**minimap**$ ivar trim -i *sorted.bam -b ../../NC_045512.2.v2.primers.bed -p 'minimap.10070000434701_S13_L001.ivartrimmed'
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**osu**$ ivar trim -i *.sorted.bam -b ../../NC_045512.2.v2.primers.bed -p 'osu.10070000434701_S13_L001.ivartrimmed'
 
+#sort trimmed bams
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**minimap**$ samtools sort -o minimap.10070000434701_S13_L001.ivartrimmed.sorted.bam *.ivartrimmed.bam
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**osu**$ samtools sort -o osu.10070000434701_S13_L001.ivartrimmed.sorted.bam *.ivartrimmed.bam
 
+#call variants with  pileup piped into ivar variants:
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**minimap**$ samtools mpileup -aa -A -d 0 -B -Q 0 --reference ../../../sarscov2WuhanHu1.fasta *.ivartrimmed.sorted.bam | ivar variants -p minimap.10070000434701_S13_L001.variants -r ../../../sarscov2WuhanHu1.fasta -g ../../GCF_009858895.2_ASM985889v3_genomic.gff
+(ivar) cmatt5@c2-4:~/SARS-COV2/ivar/MiSeq/**osu**$ samtools mpileup -aa -A -d 0 -B -Q 0 --reference ../../../sarscov2WuhanHu1.fasta *.ivartrimmed.sorted.bam | ivar variants -p osu.10070000434701_S13_L001.variants -r ../../../sarscov2WuhanHu1.fasta -g ../../GCF_009858895.2_ASM985889v3_genomic.gff
 
+#done
 ```
