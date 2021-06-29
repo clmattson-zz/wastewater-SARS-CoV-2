@@ -2,6 +2,7 @@
 
 ```{bash}
 #download from bioshare to local
+#https://bioshare.bioinformatics.ucdavis.edu/bioshare/view/campus_covid_sequencing_effort/
 #from local:
 scp 
 
