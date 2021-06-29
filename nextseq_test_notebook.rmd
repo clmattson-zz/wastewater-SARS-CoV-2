@@ -229,19 +229,17 @@ samtools depth -a GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam | awk 
 
 
 #call variants!
-gatk HaplotypeCaller --java-options {params.mem} -R {input.ref} -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy {params.ploidy} --input {input.dedup} --output {output.gvcf}
+#gatk HaplotypeCaller --java-options {params.mem} -R {input.ref} -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy {params.ploidy} --input {input.dedup} --output {output.gvcf}
 #idk what params.mem is, skipping for now
 #--java-options appears to be memory allocation ..? using "-Xmx4g" bc thats in the example on the help website (below)
-#input.dedup .... https://gatk.broadinstitute.org/hc/en-us/articles/360037225632-HaplotypeCaller claims that duplicate reads are automatically filtered out. skipping for now?
+#input.dedup .... https://gatk.broadinstitute.org/hc/en-us/articles/360037225632-HaplotypeCaller claims that duplicate reads are filtered out with flag 
 
 (gatk) cmatt5@c2-3:~/SARS-COV2/osu/data/gatk-4.2.0.0$ cd ..
 #make reference genome dictionary
 (gatk) cmatt5@c2-3:~/SARS-COV2/osu/data$ gatk-4.2.0.0/gatk CreateSequenceDictionary -R ../../sarscov2WuhanHu1.fasta
 #make reference genome index
 samtools faidx sarscov2WuhanHu1.fasta
-
-#add fake read group ID bc it apparently is required ...
-(gatk) cmatt5@c2-3:~/SARS-COV2/osu/data$ samtools addreplacerg -r 'ID:C01234' -o GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.addRG.bam GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam
+#call variants:
 (gatk) cmatt5@c2-3:~/SARS-COV2/osu/data$ gatk-4.2.0.0/gatk --java-options "-Xmx4g" HaplotypeCaller -R ./sarscov2WuhanHu1.fasta -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy 1 --sample-name 'TEST' --read-filter 'NotDuplicateReadFilter' --input GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.sorted.bam --output GSR_SWIFT_2021_04_06_O20_001_020821_C1E1_S14.gvcf
 
 ## Combine gvcfs - skip for now, only have one file
