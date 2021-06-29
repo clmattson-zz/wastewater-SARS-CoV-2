@@ -2,7 +2,8 @@
 
 ```{bash}
 #download from bioshare to local
-#https://bioshare.bioinformatics.ucdavis.edu/bioshare/view/campus_covid_sequencing_effort/
+#MiSeq: https://bioshare.bioinformatics.ucdavis.edu/bioshare/view/campus_covid_sequencing_effort/GSR_SWIFT/Environmental_Batch1_4-8-21/
+#NextSeq: https://bioshare.bioinformatics.ucdavis.edu/bioshare/view/campus_covid_sequencing_effort/GSR_SWIFT/Environmental_Batch1_NextSeq/
 #from local:
 scp 
 
