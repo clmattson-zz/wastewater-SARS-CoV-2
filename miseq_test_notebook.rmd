@@ -1,0 +1,82 @@
+## get data
+
+```{bash}
+#download from bioshare to local
+#from local:
+scp 
+
+```
+repeat OSU pipeline on MiSeq data
+
+```{bash}
+conda activate osu
+#trim with bbduk
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 t=4 in1=10070000434701_S13_L001_R1_001.fastq.gz in2=10070000434701_S13_L001_R2_001.fastq.gz out1=10070000434701_S13_L001_R1_001.bbduk.fastq.gz out2=10070000434701_S13_L001_R2_001.bbduk.fastq.gz ref=../../../bbmap/resources/adapters.fa
+ 
+ #already made bwa ref index. files are in ~/SARS-COV2
+ 
+#align with bwa mem
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ bwa mem -t 4 -M -R '@RG\tID:NULL\tSM:TEST\tLB:NULL\tPL:Illumina' ../../sarscov2WuhanHu1.fasta *R1_001.bbduk.fastq.gz *R2_001.bbduk.fastq.gz > 10070000434701_S13_L001.sam
+
+#sort sam
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ samtools sort -n 10070000434701_S13_L001.sam -o 10070000434701_S13_L001.sorted.sam
+
+#clip primers with primerclip
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ primerclip ../sarscov2_v1_masterfile.txt 10070000434701_S13_L001.sorted.sam 10070000434701_S13_L001.sorted.primerclipped.sam
+
+#Convert sam to bam
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ samtools view -b 10070000434701_S13_L001.sorted.primerclipped.sam -o 10070000434701_S13_L001.bam
+
+#Sort reads
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ samtools sort 10070000434701_S13_L001.bam -o 10070000434701_S13_L001.sorted.bam
+
+#Index reads
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ samtools index 10070000434701_S13_L001.sorted.bam
+
+#Get depth from Bam files
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ samtools depth -a 10070000434701_S13_L001.sorted.bam | awk '$3 < 5' | cut -f 1,2 > output.depth
+
+#call variants!
+#use tmux:
+tmux new -s var
+srun -J gatk -t 6:00:00 --mem=25gb -c 1 --pty bash
+conda activate gatk
+(gatk) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ ../gatk-4.2.0.0/gatk --java-options "-Xmx4g" HaplotypeCaller -R ../sarscov2WuhanHu1.fasta -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy 1 --sample-name 'TEST' --read-filter 'NotDuplicateReadFilter' --input 10070000434701_S13_L001.sorted.bam --output 10070000434701_S13_L001.gvcf
+
+#Combine gvcfs - skip for now, only have one file!
+
+#Genotype merged gvcf with gatk GenotypeGVCFs
+(gatk) cmatt5@c2-18:~/SARS-COV2/osu/MiSeq$ ../gatk-4.2.0.0/gatk GenotypeGVCFs --java-options "-Xmx4g"  -R ../sarscov2WuhanHu1.fasta -V 10070000434701_S13_L001.gvcf -O 10070000434701_S13_L001.vcf
+```
+
+
+
+#repeat Titus workflow 
+```{bash}
+#get data:
+cp ../../osu/MiSeq/10070000434701_S13_L001_R*.fastq.gz ./
+conda activate covid
+#FIRST: need to get interleaved reads with 'abundtrime' name
+#move old test data to new directory to free up the data directory in minimap-workflow
+mkdir SWIFT
+mv GSR* ./SWIFT
+#move outputs
+#run the following line in the dir with raw data: 
+(covid) cmatt5@c2-4:~/SARS-COV2/minimap-workflow/data$ snakemake -s ~/SARS-COV2/minimap-workflow/Snakefile.merge-pe -j 4
+
+#to run snakefile:
+(covid) cmatt5@c2-4:~/SARS-COV2/minimap-workflow$ snakemake --use-conda -j 4
+
+#done 
+```
+
+##repeat ivar work flow
+
+
+```{bash}
+
+
+
+
+
+```
