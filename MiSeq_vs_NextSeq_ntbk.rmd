@@ -198,3 +198,29 @@ done
 
 
 ```
+ 
+ 
+ 
+ ```{bash}
+ 
+ #ivar trim titus output bams: 
+ 
+for i in *.bam.sorted; 
+do bn=$(basename $i .bam.sorted);
+ivar trim -i ${bn}.bam.sorted -b ~/SARS-COV2/ivar/NC_045512.2.v2.primers.bed -p "${bn}.ivartrimmed.bam";
+done
+ 
+for i in *.ivartrimmed.bam; 
+do bn=$(basename $i .ivartrimmed.bam);
+samtools sort -o ${bn}.ivartrimmed.sorted.bam ${bn}.ivartrimmed.bam;
+done
+
+for i in *.ivartrimmed.sorted.bam; 
+do bn=$(basename $i .ivartrimmed.sorted.bam);
+samtools mpileup -aa -A -d 0 -B -Q 0 --reference ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}.ivartrimmed.sorted.bam | ivar variants -p "${bn}.variants" -r ~/SARS-COV2/sarscov2WuhanHu1.fasta -g ~/SARS-COV2/ivar/GCF_009858895.2_ASM985889v3_genomic.gff;
+done
+
+
+
+
+ ```
