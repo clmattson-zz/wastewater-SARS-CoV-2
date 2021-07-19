@@ -42,22 +42,19 @@ done
 
 #already made bwa ref index. files are in ~/SARS-COV2
 
-#keeps running out of space ('no space left on devide'), remvove files as i go
+#keeps running out of space ('no space left on device')
 
 #align with bwa mem
 #since every file gets the same RG line, fill line with file name ..? (now needs double quotes for variable expansion)
 (osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in ./*R1_001.bbduk.fastq.gz;
 do bn=$(basename $i R1_001.bbduk.fastq.gz); 
 bwa mem -t 4 -M -R "@RG\tID:${bn}\tSM:${bn}\tLB:SWIFT\tPL:Illumina" ../../sarscov2WuhanHu1.fasta ${bn}R1_001.bbduk.fastq.gz ${bn}R2_001.bbduk.fastq.gz > ${bn}.sam;
-rm ${bn}R1_001.bbduk.fastq.gz;
-rm ${bn}R2_001.bbduk.fastq.gz
 done
 
 #sort sam
 (osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sam; 
 do bn=$(basename $i .sam); 
 samtools sort ${bn}.sam -o ${bn}.sorted.sam;
-rm ${bn}.sam;
 done
 
 #clip primers with primerclip
@@ -71,7 +68,6 @@ done
 (osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sorted.primerclipped.sam; 
 do bn=$(basename $i .sorted.primerclipped.sam);
 samtools view -b ${bn}.sorted.primerclipped.sam -o ${bn}.bam;
-rm ${bn}.sorted.primerclipped.sam;
 done
 
 
@@ -79,7 +75,6 @@ done
 (osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.bam; 
 do bn=$(basename $i .bam);
 samtools sort ${bn}.bam -o ${bn}.sorted.bam;
-rm ${bn}.sam;
 done
 
 #Index reads and get depth from BAM files
