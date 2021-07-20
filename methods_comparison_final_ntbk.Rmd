@@ -1,0 +1,222 @@
+#goal: compare pipelines on environmental samples tested on both miseq and nextseq
+
+------------------------------------------------------------------------------------
+protocols:
+
+step               OSU                   Fontenele (ivarXbwa)              ivarXminimap
+
+trim               bbduk                   ?                               bbduk??
+
+align              bwa                   bwa                               minimap2
+
+trim primers      primer clip            ivar trim                         ivar trim
+
+call variants     gatk                   ivar variants (mpileup)           ivar variants (mpileup)
+
+output:           .vcf/                  .tsv/.fa                          .tsv/.fa
+-------------------------------------------------------------------------------------
+	
+				
+
+
+```{bash}
+#create directory structures for comaprison in follwing directiories: ivar, minimap, osu
+#this will keep diretories the same level as the Miseq test and minimize edits
+mkdir Environmental_Batch1_MiSeq
+mkdir Environmental_Batch1_NextSeq 
+
+#get data:
+
+#MiSeq: 
+cmatt5@crick:~/SARS-COV2/Batch1_MiSeq$ wget -r --level=10 -nH -nc --cut-dirs=3 --no-parent --reject "wget_index.html" --no-check-certificate --header "Cookie: sessionid=kis2uksxxdyksueredbr12mf5mxpq5hy;" https://bioshare.bioinformatics.ucdavis.edu/bioshare/wget/zp8306fews1o8ro/GSR_SWIFT/Environmental_Batch1_4-8-21/wget_index.html
+
+#NextSeq:
+cmatt5@crick:~/SARS-COV2/Batch1_NextSeq$ wget -r --level=10 -nH -nc --cut-dirs=3 --no-parent --reject "wget_index.html" --no-check-certificate --header "Cookie: sessionid=kis2uksxxdyksueredbr12mf5mxpq5hy;" https://bioshare.bioinformatics.ucdavis.edu/bioshare/wget/zp8306fews1o8ro/GSR_SWIFT/Environmental_Batch1_NextSeq/wget_index.html
+#cut file prefix with for loop, example from Shannon in Brown lab:
+for infile in reads/*R1_001.fastq.gz
+do
+bn=$(basename $infile R1_001.fastq.gz)
+megahit -1 reads/${bn}_R1_001.fastq.gz -2 reads/${bn}_R2_001.fastq.gz -o megahit-min-count-3-assembly_${bn}/ -t 6 --min-count 3
+done
+```
+
+
+## NextSeq ## 
+
+## OSU pipeline ###
+
+```{bash} 
+#adapter trim with bbduk
+(osu) cmatt5@c2-4:~/SARS-COV2/osu/Batch1_NextSeq$ for i in ../../Environmental_Batch1_NextSeq/*R1_001.fastq.gz;
+do bn=$(basename $i R1_001.fastq.gz); 
+bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 t=4 in1=../../Environmental_Batch1_NextSeq/${bn}R1_001.fastq.gz in2=../../Environmental_Batch1_NextSeq/${bn}R2_001.fastq.gz out1=./${bn}R1_001.bbduk.fastq.gz out2=./${bn}R2_001.bbduk.fastq.gz ref=../../../bbmap/resources/adapters.fa;
+done
+
+#already made bwa ref index. files are in ~/SARS-COV2
+
+#keeps running out of space ('no space left on device')
+
+#align with bwa mem
+#since every file gets the same RG line, fill line with file name ..? (now needs double quotes for variable expansion)
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in ./*R1_001.bbduk.fastq.gz;
+do bn=$(basename $i R1_001.bbduk.fastq.gz); 
+bwa mem -t 4 -M -R "@RG\tID:${bn}\tSM:${bn}\tLB:SWIFT\tPL:Illumina" ../../sarscov2WuhanHu1.fasta ${bn}R1_001.bbduk.fastq.gz ${bn}R2_001.bbduk.fastq.gz > ${bn}.sam;
+done
+
+#sort sam
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sam; 
+do bn=$(basename $i .sam); 
+samtools sort ${bn}.sam -o ${bn}.sorted.sam;
+done
+
+#clip primers with primerclip
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sorted.sam; 
+do bn=$(basename $i .sorted.sam); 
+primerclip ../sarscov2_v1_masterfile.txt ${bn}.sorted.sam ${bn}.sorted.primerclipped.sam;
+rm ${bn}.sorted.sam;
+done
+
+#Convert sam to bam
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sorted.primerclipped.sam; 
+do bn=$(basename $i .sorted.primerclipped.sam);
+samtools view -b ${bn}.sorted.primerclipped.sam -o ${bn}.bam;
+done
+
+
+#Sort reads
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.bam; 
+do bn=$(basename $i .bam);
+samtools sort ${bn}.bam -o ${bn}.sorted.bam;
+done
+
+#Index reads and get depth from BAM files
+(osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sorted.bam; 
+do bn=$(basename $i .sorted.bam);
+samtools index ${bn}.sorted.bam;
+samtools depth -a ${bn}.sorted.bam | awk '$3 < 5' | cut -f 1,2 > output.depth
+done
+
+#call variants!
+conda deactivate osu
+conda activate gatk
+(gatk) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sorted.bam; 
+do bn=$(basename $i .sorted.bam);
+../gatk-4.2.0.0/gatk --java-options "-Xmx4g" HaplotypeCaller -R ../sarscov2WuhanHu1.fasta -ERC GVCF -stand-call-conf 20 --dont-use-soft-clipped-bases -mbq 20 --max-reads-per-alignment-start 0 --linked-de-bruijn-graph --recover-all-dangling-branches --sample-ploidy 1 --sample-name 'TEST' --read-filter 'NotDuplicateReadFilter' --input ${bn}.sorted.bam --output ${bn}.gvcf; 
+done
+```
+
+
+## Fontenele et al (ivarXbwa) ##
+
+```{bash}
+## NextSeq ## 
+# complete in /share
+
+conda activate osu
+
+#adapter trim with bbduk
+(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *R1_001.fastq.gz;
+do bn=$(basename $i R1_001.fastq.gz); 
+bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 t=4 in1=${bn}R1_001.fastq.gz in2=${bn}R2_001.fastq.gz out1=${bn}R1_001.bbduk.fastq.gz out2=${bn}R2_001.bbduk.fastq.gz ref=~/bbmap/resources/adapters.fa;
+done
+
+#align with bwa mem
+#since every file gets the same RG line, fill line with file name ..? (now needs double quotes for variable expansion)
+(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in ./*R1_001.bbduk.fastq.gz;
+do bn=$(basename $i R1_001.bbduk.fastq.gz); 
+bwa mem -t 4 -M -R "@RG\tID:${bn}\tSM:${bn}\tLB:SWIFT\tPL:Illumina" ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}R1_001.bbduk.fastq.gz ${bn}R2_001.bbduk.fastq.gz > ${bn}.bbduk.bwa.sam;
+done
+
+#Convert sam to bam
+(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sam; 
+do bn=$(basename $i .bbduk.bwa.sam);
+samtools view -b ${bn}.bbduk.bwa.sam -o ${bn}.bbduk.bwa.bam
+done
+
+#switch to ivar conda env
+
+#sort bam and make .bai index files for ivar trimming 
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in ./*R1_001.bbduk.fastq.gz; 
+do bn=$(basename $i R1_001.bbduk.fastq.gz); 
+samtools sort -o ${bn}.bbduk.bwa.sorted.bam ${bn}.bbduk.bwa.bam && samtools index ${bn}.bbduk.bwa.sorted.bam; 
+done
+
+#ivar trim primers
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sorted.bam;  
+do bn=$(basename $i .bbduk.bwa.sorted.bam); 
+ivar trim -i ${bn}.bbduk.bwa.sorted.bam -b ~/SARS-COV2/ivar/NC_045512.2.v2.primers.bed -p "${bn}.bbduk.bwa.sorted.ivar.bam"; 
+done
+
+#sort again?
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sorted.ivar.bam;  
+do bn=$(basename $i .bbduk.bwa.sorted.ivar.bam); 
+samtools sort -o ${bn}.bbduk.bwa.sorted.ivar.sorted.bam ${bn}.bbduk.bwa.sorted.ivar.bam; 
+done
+
+#call variants:
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sorted.ivar.sorted.bam;  
+do bn=$(basename $i .bbduk.bwa.sorted.ivar.sorted.bam); 
+samtools mpileup -aa -A -d 0 -B -Q 0 --reference ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}.bbduk.bwa.sorted.ivar.sorted.bam | ivar variants -p "${bn}.variants" -r ~/SARS-COV2/sarscov2WuhanHu1.fasta -g ~/SARS-COV2/ivar/GCF_009858895.2_ASM985889v3_genomic.gff; 
+done
+
+#organize 
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mkdir fontenele
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mv *bbduk* fontenele 
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mv *variants* fontenele
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ cd fontenele
+
+#generate consensus files 
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1/fontenele$ for i in *.bbduk.bwa.sorted.ivar.sorted.bam;  
+do bn=$(basename $i .bbduk.bwa.sorted.ivar.sorted.bam); 
+samtools mpileup -aa -A -d 0 -Q 0 ${bn}.bbduk.bwa.sorted.ivar.sorted.bam | ivar consensus -p "${bn}.fontenele.consensus"; 
+done
+```
+
+## ivarXminimap2 ##
+
+```{bash}
+conda activate osu
+
+#adapter trim with bbduk
+# (keep the same for now to compare minimap2 vs bwa)
+(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *R1_001.fastq.gz;
+do bn=$(basename $i R1_001.fastq.gz); 
+bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 t=4 in1=${bn}R1_001.fastq.gz in2=${bn}R2_001.fastq.gz out1=${bn}R1_001.bbduk.fastq.gz out2=${bn}R2_001.bbduk.fastq.gz ref=~/bbmap/resources/adapters.fa;
+done
+
+#align with minimap2 
+#code from Utah DoH https://github.com/CDCgov/SARS-CoV-2_Sequencing/tree/master/protocols/BFX-UT_ARTIC_Illumina
+# minimap2 -ax sr -t {threads} -o aligned/{sample}.sam artic-ncov2019/primer_schemes/nCoV-2019/V3/nCoV-2019.reference.fasta {input.read1} {input.read2} | samtools sort | samtools view -F 4 -o {sample}.sorted.bam
+#since every file gets the same RG line, fill line with file name ..? (now needs double quotes for variable expansion)
+(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in ./*R1_001.bbduk.fastq.gz;
+do bn=$(basename $i R1_001.bbduk.fastq.gz); 
+minimap2 -ax sr -t 4 -o ${bn}.sam ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}R1_001.bbduk.fastq.gz ${bn}R2_001.bbduk.fastq.gz | samtools sort | samtools view -F 4 -o ${bn}.bbduk.mmp.sorted.bam;
+done
+
+#code above converts sam to sorted bam. 
+#switch to ivar conda env
+
+#ivar trim primers
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.mmp.sorted.bam;  
+do bn=$(basename $i .bbduk.mmp.sorted.bam); ivar trim -i ${bn}.bbduk.mmp.sorted.bam -b ~/SARS-COV2/ivar/NC_045512.2.v2.primers.bed -p "${bn}.bbduk.mmp.sorted.ivar.bam"; 
+done
+
+#sort again?
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.mmp.sorted.ivar.bam;  
+do bn=$(basename $i .bbduk.mmp.sorted.ivar.bam); samtools sort -o ${bn}.bbduk.mmp.sorted.ivar.sorted.bam ${bn}.bbduk.mmp.sorted.ivar.bam; 
+done
+
+#call variants:
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.mmp.sorted.ivar.sorted.bam;  
+do bn=$(basename $i .bbduk.mmp.sorted.ivar.sorted.bam); 
+samtools mpileup -aa -A -d 0 -B -Q 0 --reference ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}.bbduk.mmp.sorted.ivar.sorted.bam | ivar variants -p "${bn}.variants" -r ~/SARS-COV2/sarscov2WuhanHu1.fasta -g ~/SARS-COV2/ivar/GCF_009858895.2_ASM985889v3_genomic.gff; 
+done
+
+#generate consensus files 
+(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1/fontenele$ for i in *.bbduk.mmp.sorted.ivar.sorted.bam;  
+do bn=$(basename $i .bbduk.mmp.sorted.ivar.sorted.bam); 
+samtools mpileup -aa -A -d 0 -Q 0 ${bn}.bbduk.mmp.sorted.ivar.sorted.bam | ivar consensus -p "${bn}.ivarmmp.consensus"; 
+done
+```
+
+
