@@ -94,7 +94,7 @@ done
 (osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.bam; 
 do bn=$(basename $i .bam);
 samtools sort ${bn}.bam -o ${bn}.sorted.bam;
-done
+done 
 
 #Index reads and get depth from BAM files
 (osu) cmatt5@c2-18:~/SARS-COV2/osu/Batch1_NextSeq$ for i in *.sorted.bam; 
