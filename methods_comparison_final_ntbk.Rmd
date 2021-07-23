@@ -3,17 +3,19 @@
 ------------------------------------------------------------------------------------
 protocols:
 
-step               OSU                   Fontenele (ivarXbwa)              ivarXminimap
+step               OSU            (ivarXbwa      	Fontenele                 ivarXminimap2		       crits-christoff
 
-trim               bbduk                 bbduk                             bbduk??
+trim               bbduk          bbduk      		none                      none				none
 
-align              bwa                   bwa                               minimap2
+align              bwa            bwa       		bwa                       minimap2			bowtie2
 
-trim primers      primer clip            ivar trim                         ivar trim
+trim primers      primer clip     ivar trim       	ivar trim                 ivar trim			none
 
-call variants     gatk                   ivar variants (mpileup)           ivar variants (mpileup)
+call variants     gatk            ivar variants         ivar variants (mpileup)  ivar variants (mpileup)	inStrain
 
-output:           .vcf/fa                .tsv/.fa                          .tsv/.fa
+build consensus   ??		  ivar consensus 	ivar consensus		 ivar consensus			
+
+output:           .vcf/fa         .tsv/.fa      	.tsv/.fa                 .tsv/.fa
 -------------------------------------------------------------------------------------
 	
 				
@@ -310,4 +312,54 @@ samtools mpileup -aa -A -d 0 -Q 0 ${bn}.bbduk.mmp.sorted.ivar.sorted.bam | ivar 
 done
 ```
 
+## crits-cristoff ##
 
+```{bash}
+#make sambam sript
+(christ) cmatt5@c2-3:~/SARS-COV2$ vim sambam
+#copy/paste from github (https://github.com/alexcritschristoph/wastewater_sarscov2)
+`
+#!/bin/sh
+#v0.1: Simple wrapper to convert sam files to sorted bam files - Rohan Sachdeva
+samtools view -bu | samtools sort -@6 -l 6 -
+`
+
+#make executable?
+(christ) cmatt5@c2-3:~/SARS-COV2$ chmod +x sambam
+(christ) cmatt5@c2-3:/group/diazmunozlab/share/NextSeq_Environmental_Batch1 $mkdir critschristoff
+
+#make bowtie2 index for ref fasta
+~/SARS-COV@$ bowtie2-build ~/SARS-COV2/sarscov2WuhanHu1.fasta sarscov2WuhanHu1
+
+#no trim 
+#sambam doesnt wor, do sam->bam and sort separately
+
+#align w bowtie2
+(christ) cmatt5@c2-3:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *R1_001.fastq.gz;
+do bn=$(basename $i R1_001.fastq.gz); 
+bowtie2 -p 20 -x sarscov2WuhanHu1 -1 ${bn}R1_001.fastq.gz -2 ${bn}R2_001.fastq.gz -S ${bn}.bowtie.sam;
+done
+
+#sam to bam
+(christ) cmatt5@c2-3:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bowtie.sam; 
+do bn=$(basename $i .bowtie.sam);
+samtools view -b ${bn}.bowtie.sam -o ${bn}.bowtie.bam
+done
+
+
+(christ) cmatt5@c2-3:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bowtie.bam;  
+do bn=$(basename $i .bowtie.bam); 
+samtools sort -o ${bn}.bowtie.sorted.bam ${bn}.bowtie.bam -@6 -l 6; 
+done
+
+(christ) cmatt5@c2-3:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bowtie.sorted.bam;  
+do bn=$(basename $i .bowtie.sorted.bam); 
+sambamba markdup -r ${bn}.bowtie.sorted.bam ${bn}.bowtie.sorted.sambamba.bam; 
+done
+
+
+for i in *.bowtie.sorted.sambamba.bam;  
+do bn=$(basename $i .bowtie.sorted.sambamba.bam); 
+inStrain profile ${bn}.bowtie.sorted.sambamba.bam -l 0.9 ../sarscov2WuhanHu1.fasta -o ${bn}.bowtie.sorted.sambamba.bam.instrain;
+done
+```
