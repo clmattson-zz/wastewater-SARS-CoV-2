@@ -167,7 +167,7 @@ done
 #as per fontenele et al:
 #no min cutoff frequency (-t 0 )
 #min coverage (read depth) 20 (-m 20)
-#default quality sqore (-q 20)
+#default quality score (20)
 (ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bwa.sorted.ivar.sorted.bam;  
 do bn=$(basename $i .bwa.sorted.ivar.sorted.bam); 
 samtools mpileup -aa -A -d 0 -B -Q 20 --reference ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}.bwa.sorted.ivar.sorted.bam | ivar variants -t 0 -m 20 -p "${bn}.fontenele.variants" -r ~/SARS-COV2/sarscov2WuhanHu1.fasta -g ~/SARS-COV2/ivar/GCF_009858895.2_ASM985889v3_genomic.gff; 
@@ -182,7 +182,7 @@ done
 #generate consensus files 
 #no min cutoff frequency (-t 0 )
 #min coverage (read depth) 20 (-m 20)
-#default quality sqore (-q)
+#default quality sqore (20)
 (ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1/fontenele$ for i in *.bwa.sorted.ivar.sorted.bam;  
 do bn=$(basename $i .bwa.sorted.ivar.sorted.bam); 
 samtools mpileup -aa -A -d 0 -Q 20 ${bn}.bwa.sorted.ivar.sorted.bam | ivar consensus -t 0 -m 20 -q 20 -p "${bn}.fontenele.consensus"; 
@@ -254,6 +254,13 @@ done
 do bn=$(basename $i .mmp.sorted.ivar.sorted.bam); 
 samtools mpileup  -A -d 1000 -B -Q 0  ${bn}.mmp.sorted.ivar.sorted.bam | ivar consensus -p "${bn}.ivarmmp.consensus"; 
 done
+
+#rename consensus fastas
+for i in *.fa;  
+do bn=$(basename $i .fa);
+sed 's/>/>mmpXivar_/g' ${bn}.fa > ${bn}.fasta;
+done
+
 ```
 
 ## crits-cristoff ##
@@ -315,80 +322,62 @@ done
 
 for i in *.fasta;  
 do bn=$(basename $i .fasta);
-sed 's/>/>crits-christoph_/g' ${bn}.fasta > ${bn}.CC.fasta;
+sed 's/>/>crits-christoph_/g' ${bn}.fasta > $CC.{bn}.fasta;
 done
 
 ```
 
-
-
-
-
-
-## dont use ##
-
-## w bbduk, ivarXbwa ##
+## QC ?? ##
 
 ```{bash}
-## NextSeq ## 
-# complete in /share
 
-conda activate osu
+#average depth of covered bases
+for i in *.bwa.sorted.ivar.sorted.bam; do bn=$(basename $i .bwa.sorted.ivar.sorted.bam); samtools depth ${bn}.bwa.sorted.ivar.sorted.bam |  awk '{sum+=$3} END { print "Average = ",sum/NR}'; done
 
-#adapter trim with bbduk
-(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *R1_001.fastq.gz;
-do bn=$(basename $i R1_001.fastq.gz); 
-bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 t=4 in1=${bn}R1_001.fastq.gz in2=${bn}R2_001.fastq.gz out1=${bn}R1_001.bbduk.fastq.gz out2=${bn}R2_001.bbduk.fastq.gz ref=~/bbmap/resources/adapters.fa;
-done
-
-#align with bwa mem
-#since every file gets the same RG line, fill line with file name ..? (now needs double quotes for variable expansion)
-(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in ./*R1_001.bbduk.fastq.gz;
-do bn=$(basename $i R1_001.bbduk.fastq.gz); 
-bwa mem -t 4 -M -R "@RG\tID:${bn}\tSM:${bn}\tLB:SWIFT\tPL:Illumina" ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}R1_001.bbduk.fastq.gz ${bn}R2_001.bbduk.fastq.gz > ${bn}.bbduk.bwa.sam;
-done
-
-#Convert sam to bam
-(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sam; 
-do bn=$(basename $i .bbduk.bwa.sam);
-samtools view -b ${bn}.bbduk.bwa.sam -o ${bn}.bbduk.bwa.bam
-done
-
-#switch to ivar conda env
-
-#sort bam and make .bai index files for ivar trimming 
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in ./*R1_001.bbduk.fastq.gz; 
-do bn=$(basename $i R1_001.bbduk.fastq.gz); 
-samtools sort -o ${bn}.bbduk.bwa.sorted.bam ${bn}.bbduk.bwa.bam && samtools index ${bn}.bbduk.bwa.sorted.bam; 
-done
-
-#ivar trim primers
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sorted.bam;  
-do bn=$(basename $i .bbduk.bwa.sorted.bam); 
-ivar trim -i ${bn}.bbduk.bwa.sorted.bam -b ~/SARS-COV2/ivar/NC_045512.2.v2.primers.bed -p "${bn}.bbduk.bwa.sorted.ivar.bam"; 
-done
-
-#sort again?
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sorted.ivar.bam;  
-do bn=$(basename $i .bbduk.bwa.sorted.ivar.bam); 
-samtools sort -o ${bn}.bbduk.bwa.sorted.ivar.sorted.bam ${bn}.bbduk.bwa.sorted.ivar.bam; 
-done
-
-#call variants:
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ for i in *.bbduk.bwa.sorted.ivar.sorted.bam;  
-do bn=$(basename $i .bbduk.bwa.sorted.ivar.sorted.bam); 
-samtools mpileup -aa -A -d 0 -B -Q 0 --reference ~/SARS-COV2/sarscov2WuhanHu1.fasta ${bn}.bbduk.bwa.sorted.ivar.sorted.bam | ivar variants -p "${bn}.variants" -r ~/SARS-COV2/sarscov2WuhanHu1.fasta -g ~/SARS-COV2/ivar/GCF_009858895.2_ASM985889v3_genomic.gff; 
-done
-
-#organize 
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mkdir fontenele
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mv *bbduk* fontenele 
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mv *variants* fontenele
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ cd fontenele
-
-#generate consensus files 
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1/fontenele$ for i in *.bbduk.bwa.sorted.ivar.sorted.bam;  
-do bn=$(basename $i .bbduk.bwa.sorted.ivar.sorted.bam); 
-samtools mpileup -aa -A -d 0 -Q 0 ${bn}.bbduk.bwa.sorted.ivar.sorted.bam | ivar consensus -p "${bn}.fontenele.consensus"; 
-done
+NextSeq		MiSeq
+632.46		90.9051
+1106.7		173.152
+1245.93		178.622
+1655.21		280.695
+1667.21		273.818
+788.496		109.768
+1678.13		270.527
+1137.95		186.635
+714.669		93.3433
+1915.14		278.379
+1581.58		219.86
+1525.25		309.669
+2770.25		506.866
+1703.76		271.324
+1512.85		225.141
+647.034		87.6829
+2727.74		499.554
+2377.33		410.155
+1815.75		254.279
+2210.21		490.293
+1774.19		272.706
+974.363		136.245
+890.714		127.131
+520.666		68.9691
 ```
+
+## get NextFlow NF-Core Viral Recon pipeline working ##
+```{bash}
+~/nextflow run nf-core/viralrecon --help
+
+ ~/nextflow run nf-core/viralrecon --input ./sample_test.csv --platform illumina --protocol amplicon --genome NC_045512.2 --fasta ~/SARS-COV2/sarscov2WuhanHu1.fasta --skip_kraken2 --skip_fastp --skip_cutadapt --callers ivar --min_mapped_reads 20 --filter_duplicates --skip_assembly --primer_bed ~/SARS-COV2/ivar/NC_045512.2.v2.primers.bed --max_memory 40.GB --primer_left_suffix F --primer_right_suffix R --ivar_trim_offset 5
+
+primer_set SWIFT --primer_bed ~/SARS-COV2/ivar/NC_045512.2.v2.primers.bed 
+```
+
+
+
+#concatenate consensus files on local#
+```{bash}
+
+cmatt@DESKTOP-JN1E3J1 MINGW64 ~/Documents/sarscov2/ for i in *fontenele/consensus/*.fontenele.consensus.fasta;  
+do bn=$(basename $i .fontenele.consensus.fasta);
+cat ./fontenele/consensus/${bn}.fontenele.consensus.fasta ./critschristoph/consensus/${bn}.bowtie.sorted.sambamba.CC.fasta ./ivarmmp/consensus/${bn}.ivarmmp.consensus.fasta > ${bn}.consensus.fasta; 
+done
+
+````
