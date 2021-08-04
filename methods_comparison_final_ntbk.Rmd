@@ -54,6 +54,11 @@ do bn=$(basename $i R1_001.fastq.gz);
 bbduk.sh ktrim=r k=23 mink=11 hdist=1 qtrim=r1 trimq=15 minlength=30 maxns=0 t=4 in1=../../Environmental_Batch1_NextSeq/${bn}R1_001.fastq.gz in2=../../Environmental_Batch1_NextSeq/${bn}R2_001.fastq.gz out1=./${bn}R1_001.bbduk.fastq.gz out2=./${bn}R2_001.bbduk.fastq.gz ref=../../../bbmap/resources/adapters.fa;
 done
 
+
+for i *R1_001.fastq.gz;
+do bn=$(basename $i R1_001.fastq.gz); 
+awk '{if(NR%4==2) {count++; bases += length} } END{print bases/count}' ${bn}R1_001.fastq.gz; done
+
 #already made bwa ref index. files are in ~/SARS-COV2
 
 #keeps running out of space ('no space left on device')
