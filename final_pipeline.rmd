@@ -120,3 +120,10 @@ cat ./fontenele/consensus/${bn}.fontenele.consensus.fasta ./critschristoph/conse
 done
 
 ````
+
+
+
+avg genome coverage
+avg depth of covered bases
+num snvs
+num snvs overlapping VOCs
