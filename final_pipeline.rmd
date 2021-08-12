@@ -92,21 +92,31 @@ done
 
 ```
 
-
-
-
-
-
-## QC ?? ##
-
 ```{bash}
 
-#average depth of covered bases
-for i in *.bwa.sorted.ivar.sorted.bam; do bn=$(basename $i .bwa.sorted.ivar.sorted.bam); samtools depth ${bn}.bwa.sorted.ivar.sorted.bam |  awk '{sum+=$3} END { print "Average = ",sum/NR}'; done
+## QC  ##
 
-#coverage
+# genome coverage
+for i in *.sorted.bam; 
+do bn=$(basename $i .sorted.bam); 
+samtools coverage ${bn}.sorted.bam > ${bn}.coverage.tsv; 
+done
 
+# average depth of covered bases
+for i in *.sorted.bam; 
+do bn=$(basename $i .sorted.bam); 
+samtools depth ${bn}.sorted.bam | awk '{sum+=$3} END { print "Average = ",sum/NR}'; 
+done
 
+#depth of all dases
+for i in *.sorted.bam; 
+do bn=$(basename $i .sorted.bam); 
+samtools depth ${bn}.sorted.bam > ${bn}.readdepth.tsv;
+done
+
+#to do:
+num snvs
+num snvs overlapping VOCs
 ```
 
 
@@ -119,11 +129,5 @@ do bn=$(basename $i .fontenele.consensus.fasta);
 cat ./fontenele/consensus/${bn}.fontenele.consensus.fasta ./critschristoph/consensus/${bn}.bowtie.sorted.sambamba.CC.fasta ./ivarmmp/consensus/${bn}.ivarmmp.consensus.fasta > ${bn}.consensus.fasta; 
 done
 
-````
+```
 
-
-
-avg genome coverage
-avg depth of covered bases
-num snvs
-num snvs overlapping VOCs
