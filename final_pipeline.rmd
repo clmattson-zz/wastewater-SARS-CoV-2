@@ -114,9 +114,12 @@ do bn=$(basename $i .sorted.bam);
 samtools depth ${bn}.sorted.bam > ${bn}.readdepth.tsv;
 done
 
-#to do:
-num snvs
-num snvs overlapping VOCs
+```
+
+```{bash}
+#from local
+secure copy the .tsv and open in MS excel
+
 ```
 
 
