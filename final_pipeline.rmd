@@ -1,91 +1,83 @@
 SARS-CoV2 Wasterwater sequencing variant calling pipeline, based off Fontenele et al 2021
 
 ------------------------------------------------------------------------------------
-protoco1:
+protoco1, based on Fontenele et al
 
-step              	 tool               
+step              	 tool                  
 
-1. trim       		    none                   
+1. align       	      	bwa                
 
-2. align       	      bwa                
+2. trim primers    	ivar trim         
 
-3. trim primers    	  ivar trim         
+3. call variants      (mpileup +) ivar variants   
 
-4. call variants      (mpileup +) ivar variants   
-
-5. build consensus   	(mpileup +) ivar consensus		 		
+4. build consensus   	(mpileup +) ivar consensus		 		
 
 output:           	.tsv/.fa      
 -------------------------------------------------------------------------------------
-	
+
+```{bash}
+#build conda environment
+conda create -y -n ivar
+conda activate ivar
+conda install bwa
+conda install ivar
+```
 				
 
-## Fontenele et al ##
+
 
 ```{bash}
 #start w raw seqs
 
-#align with bwa mem
-#since every file gets the same RG line, fill line with file name .? (now needs double quotes for variable expansion)
-(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ 
+#1. align with bwa
+#   since every file gets the same RG line, fill line with file name .? (needs double quotes for variable expansion)
 for i in ./*R1_001.fastq.gz;
 do bn=$(basename $i R1_001.fastq.gz); 
-bwa mem -t 4 -M -R "@RG\tID:${bn}\tSM:${bn}\tLB:SWIFT\tPL:Illumina" ~/../sarscov2WuhanHu1.fasta ${bn}R1_001.fastq.gz ${bn}R2_001.fastq.gz > ${bn}.bwa.sam;
+bwa mem -t 4 -M -R "@RG\tID:${bn}\tSM:${bn}\tLB:SWIFT\tPL:Illumina" ../sarscov2WuhanHu1.fasta ${bn}R1_001.fastq.gz ${bn}R2_001.fastq.gz > ${bn}.bwa.sam;
 done
 
-#Convert sam to bam
-(osu) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ 
+#2. Convert sam to bam
 for i in *.bwa.sam; 
 do bn=$(basename $i .bwa.sam);
 samtools view -b ${bn}.bwa.sam -o ${bn}.bwa.bam
 done
 
-#switch to ivar conda env
-
-#sort bam and make .bai index files for ivar trimming 
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ 
+#3. sort bam and make .bai index files for ivar trimming 
 for i in ./*R1_001.fastq.gz; 
 do bn=$(basename $i R1_001.fastq.gz); 
 samtools sort -o ${bn}.bwa.sorted.bam ${bn}.bwa.bam && samtools index ${bn}.bwa.sorted.bam; 
 done
 
-#ivar trim primers
-#use default settings
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ 
+#4. ivar trim primers
+#   use default settings
 for i in *.bwa.sorted.bam;  
 do bn=$(basename $i .bwa.sorted.bam); 
 ivar trim -i ${bn}.bwa.sorted.bam -b ../nc_045512.2.v2.primers.bed -p "${bn}.bwa.sorted.ivar.bam"; 
 done
 
-#sort again?
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ 
+#5. sort again
 for i in *.bwa.sorted.ivar.bam;  
 do bn=$(basename $i .bwa.sorted.ivar.bam); 
 samtools sort -o ${bn}.bwa.sorted.ivar.sorted.bam ${bn}.bwa.sorted.ivar.bam; 
 done
 
-#call variants:
+#6. call variants:
 #as per fontenele et al:
 #no min cutoff frequency (-t 0 )
 #min coverage (read depth) 20 (-m 20)
 #default quality score (20)
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ 
 for i in *.bwa.sorted.ivar.sorted.bam;  
 do bn=$(basename $i .bwa.sorted.ivar.sorted.bam); 
 samtools mpileup -aa -A -d 0 -B -Q 20 --reference ../sarscov2WuhanHu1.fasta ${bn}.bwa.sorted.ivar.sorted.bam | ivar variants -t 0 -m 20 -p "${bn}.fontenele.variants" -r ../sarscov2WuhanHu1.fasta -g ../GCF_009858895.2_ASM985889v3_genomic.gff; 
 done
 
-#organize 
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mkdir fontenele
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mv ** fontenele 
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ mv *variants* fontenele
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1$ cd fontenele
 
-#generate consensus files 
+
+#7. generate consensus files 
 #no min cutoff frequency (-t 0 )
 #min coverage (read depth) 20 (-m 20)
 #default quality sqore (20)
-(ivar) cmatt5@c2-18:/group/diazmunozlab/share/NextSeq_Environmental_Batch1/fontenele$ 
 for i in *.bwa.sorted.ivar.sorted.bam;  
 do bn=$(basename $i .bwa.sorted.ivar.sorted.bam); 
 samtools mpileup -aa -A -d 0 -Q 20 ${bn}.bwa.sorted.ivar.sorted.bam | ivar consensus -t 0 -m 20 -q 20 -p "${bn}.fontenele.consensus"; 
@@ -101,10 +93,12 @@ done
 
 ```{bash}
 
-## QC  ##
+## analysis ##
 
-activate conda env with older samtools version
+#create and activate conda env with older samtools version
+conda create -y -n samtoolsv112
 conda activate samtoolsv112
+conda install samtools=1.12
 
 # genome coverage
 for i in *.bwa.sorted.ivar.sorted.bam; 
@@ -112,6 +106,7 @@ do bn=$(basename $i .bwa.sorted.ivar.sorted.bam);
 samtools coverage ${bn}.bwa.sorted.ivar.sorted.bam > ${bn}.coverage.tsv; 
 done
 
+#genome coverage data wrangling:
 # add filename to col 1
 for i in *.coverage.tsv;
 do bn=$(basename $i .coverage.tsv);
