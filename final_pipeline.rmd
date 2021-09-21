@@ -140,15 +140,3 @@ secure copy the .tsv and open in MS excel
 
 ```
 
-
-
-#concatenate consensus files on local#
-```{bash}
-
-cmatt@DESKTOP-JN1E3J1 MINGW64 ~/Documents/sarscov2/ for i in *fontenele/consensus/*.fontenele.consensus.fasta;  
-do bn=$(basename $i .fontenele.consensus.fasta);
-cat ./fontenele/consensus/${bn}.fontenele.consensus.fasta ./critschristoph/consensus/${bn}.bowtie.sorted.sambamba.CC.fasta ./ivarmmp/consensus/${bn}.ivarmmp.consensus.fasta > ${bn}.consensus.fasta; 
-done
-
-```
-
