@@ -1,4 +1,3 @@
-setwd('C:/Users/cmatt/Documents/sarscov2/fontenele/tsvsanalysis/env3/results')
 library("dplyr")
 library("tidyr")
 library("ggplot2")
