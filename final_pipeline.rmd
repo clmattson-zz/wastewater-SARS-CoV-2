@@ -136,7 +136,7 @@ done
 
 ```{bash}
 #from local
-secure copy the .tsv and open in MS excel
+scp the .tsv 
 
 ```
 
