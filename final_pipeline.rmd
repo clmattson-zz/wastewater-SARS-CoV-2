@@ -1,7 +1,7 @@
 SARS-CoV2 Wastewater sequencing variant calling pipeline, based off Fontenele et al 2021
 
 ------------------------------------------------------------------------------------
-protoco1, based on Fontenele et al
+protocol, based on Fontenele et al
 
 step              	 tool                  
 
